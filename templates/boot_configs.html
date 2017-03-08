@@ -1,0 +1,92 @@
+<html>
+        <head>
+                <title>Stateful Boot Management</title>
+                <meta content="text/html; charset = UTF-8" http-equiv="content-type" />
+                <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+                <script>
+                        function parse_list(response) {
+                                $('#list').empty();
+                                if (typeof(response) != "object") {
+                                        response = [response];
+                                } 
+                                for(var i = 0; i < response.length; i++) {
+                                        $('#list').append($('<li>').append(response[i]).addClass("boot_config"));
+                                }
+                                $('.boot_config').on('click', function() {
+                                        load($(this).text());
+                                });
+                        }
+                        function parse_response(response) {
+                                $('#config').val(response['config']);
+                                $('#title').val(response['title']);
+                        }
+                        function log_ajax_err(xhr, resp, text) {
+                                console.log(xhr, resp, text);
+                        }
+                        function get_boot_configs() {
+                                $.ajax({
+                                        url: '/api/v1/boot_config/',
+                                        type: 'GET',
+                                        success: parse_list,
+                                        error: log_ajax_err
+                                })
+                        }
+                        function load(title) {
+                                $.ajax({
+                                        url: '/api/v1/boot_config/' + title + '/',
+                                        type: 'GET',
+                                        success: parse_response,
+                                        error: log_ajax_err
+                                })
+                        }
+                        $(document).ready(function(){
+                                $("#add").on('click', function(){
+                                        $.ajax({
+                                                url: '/api/v1/boot_config/',
+                                                type: 'PUT',
+                                                contentType: "application/json",
+                                                dataType: 'json',
+                                                data: JSON.stringify($("#form").serializeArray()),
+                                                success: parse_list,
+                                                error: log_ajax_err
+                                        })
+                                });
+                                $("#update").on('click', function() {
+                                        $.ajax({
+                                                url: '/api/v1/boot_config/' + $('#title').val() + '/',
+                                                type: 'POST',
+                                                contentType: "application/json",
+                                                dataType: 'json',
+                                                data: JSON.stringify($('#form').serializeArray()),
+                                                success: parse_response,
+                                                error: log_ajax_err
+                                        })
+                                });
+                                $("#load").on('click', function() {
+                                        load($('#title').val());
+                                });
+                                $("#delete").on('click', function() {
+                                        $.ajax({
+                                                url: '/api/v1/boot_config/' + $('#title').val() + '/',
+                                                type: 'DELETE',
+                                                success: get_boot_configs,
+                                                error: log_ajax_err
+                                        })
+                                });
+                                get_boot_configs();
+                        });
+                </script>
+        </head>
+        <body>
+                <form id="form">
+                        <input type="text" id="title" name="title" placeholder="Title">
+                        <input type="text" id="config" name="config" placeholder="Config">
+                        <input type="button" id="add" name="add" value="Add">
+                        <input type="button" id="update" name="update" value="Update">
+                        <input type="button" id="load" name="load" value="Load">
+                        <input type="button" id="delete" name="delete" value="Delete">
+                </form>
+                <ul id="list">
+                </ul>
+        </body>
+</html>
