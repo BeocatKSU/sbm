@@ -9,6 +9,7 @@
                                 if (typeof(response) != "object") {
                                         response = [response];
                                 } 
+                                response.sort();
                                 for(var i = 0; i < response.length; i++) {
                                         $('#machine_list').append($('<li>').append(response[i]).addClass("machine_config"));
                                 }
@@ -21,11 +22,12 @@
                                 if (typeof(response) != "object") {
                                         response = [response];
                                 } 
+                                response.sort();
                                 for(var i = 0; i < response.length; i++) {
                                         $('#boot_config_list').append($('<li>').append(response[i]).addClass("boot_config"));
                                 }
                                 $('.boot_config').on('click', function() {
-                                        load($(this).text());
+                                        set_boot_config($(this).text());
                                 });
                         }
                         function parse_response(response) {
@@ -35,6 +37,11 @@
                                 $('#alternate_boot').val(response['alternate_boot']);
                                 $('#switch_type').val(response['switch_type']);
                                 $('#time_between').val(response['time_between']);
+                                if(response['switch_type'] == 'timed') {
+                                        $("#time_between").show();
+                                } else {
+                                        $("#time_between").hide();
+                                }
                         }
                         function log_ajax_err(xhr, resp, text) {
                                 console.log(xhr, resp, text);
@@ -62,6 +69,14 @@
                                         success: parse_response,
                                         error: log_ajax_err
                                 })
+                        }
+                        function set_boot_config(title) {
+                                if ($("#default_boot").val() == "") {
+                                        $("#default_boot").val(title);
+                                }
+                                if ($("#alternate_boot").val() == "") {
+                                        $("#alternate_boot").val(title);
+                                }
                         }
                         $(document).ready(function(){
                                 $("#add").on('click', function(){
@@ -97,6 +112,13 @@
                                                 error: log_ajax_err
                                         })
                                 });
+                                $("#switch_type").on("change", function() {
+                                        if ($(this).val() == "timed") {
+                                                $("#time_between").show();
+                                        } else {
+                                                $("#time_between").hide();
+                                        }
+                                });
                                 get_machines();
                                 get_boot_configs();
                         });
@@ -112,14 +134,16 @@
                                 <option value="alternating">Alternating</option>
                                 <option value="timed">Timed</option>
                         </select>
-                        <input type="text" id="time_between" name="time_between" hidden>
+                        <input type="text" id="time_between" name="time_between" placeholder="Seconds between boots" hidden>
                         <input type="button" id="add" name="add" value="Add">
                         <input type="button" id="update" name="update" value="Update">
                         <input type="button" id="load" name="load" value="Load">
                         <input type="button" id="delete" name="delete" value="Delete">
                 </form>
+                <h2>Machines</h2>
                 <ul id="machine_list">
                 </ul>
+                <h2>Boot Configs</h2>
                 <ul id="boot_config_list">
                 </ul>
         </body>
