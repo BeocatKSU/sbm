@@ -2,7 +2,9 @@
         <head>
                 <title>Stateful Boot Management</title>
                 <meta content="text/html; charset = UTF-8" http-equiv="content-type" />
+                <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
                 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+                <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
                 <script>
                         function parse_machine_list(response) {
                                 $('#machine_list').empty();
@@ -29,6 +31,16 @@
                                 $('.boot_config').on('click', function() {
                                         set_boot_config($(this).text());
                                 });
+                        }
+                        function parse_variable_list(response) {
+                                $('#variable_list').empty();
+                                if (typeof(response) != "object") {
+                                        response = [response];
+                                } 
+                                response.sort();
+                                for(var i = 0; i < response.length; i++) {
+                                        $('#variable_list').append($('<li>').append(response[i]).addClass("variable"));
+                                }
                         }
                         function parse_response(response) {
                                 console.log(response);
@@ -62,6 +74,14 @@
                                         error: log_ajax_err
                                 })
                         }
+                        function get_variables() {
+                                $.ajax({
+                                        url: '/api/v1/variable/',
+                                        type: 'GET',
+                                        success: parse_variable_list,
+                                        error: log_ajax_err
+                                })
+                        }
                         function load(hostname) {
                                 $.ajax({
                                         url: '/api/v1/machine/' + hostname + '/',
@@ -77,6 +97,9 @@
                                 if ($("#alternate_boot").val() == "") {
                                         $("#alternate_boot").val(title);
                                 }
+                        }
+                        function test_dialog(response) {
+                                $('<div>').append($('<textarea readonly>').append(response)).dialog();
                         }
                         $(document).ready(function(){
                                 $("#add").on('click', function(){
@@ -119,8 +142,17 @@
                                                 $("#time_between").hide();
                                         }
                                 });
+                                $("#test").on('click', function() {
+                                        $.ajax({
+                                                url: '/api/v1/boot/test/' + $('#hostname').val() + '/',
+                                                type: 'GET',
+                                                success: test_dialog,
+                                                error: log_ajax_err
+                                        })
+                                });
                                 get_machines();
                                 get_boot_configs();
+                                get_variables();
                         });
                 </script>
         </head>
@@ -139,12 +171,16 @@
                         <input type="button" id="update" name="update" value="Update">
                         <input type="button" id="load" name="load" value="Load">
                         <input type="button" id="delete" name="delete" value="Delete">
+                        <input type="button" id="test" name="test", value="Test">
                 </form>
                 <h2>Machines</h2>
                 <ul id="machine_list">
                 </ul>
                 <h2><a href="/boot_configs">Boot Configs</a></h2>
                 <ul id="boot_config_list">
+                </ul>
+                <h2><a href="/variables">Variables</a></h2>
+                <ul id="variable_list">
                 </ul>
         </body>
 </html>

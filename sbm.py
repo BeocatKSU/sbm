@@ -73,6 +73,22 @@ class Machine(db.Model):
         )
 
 
+class Variable(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(80), unique=True)
+    value = db.Column(db.String(120))
+
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+
+    def __repr__(self):
+        return '<Variable {}: {}>'.format(
+            repr(self.key),
+            repr(self.value)
+        )
+
+
 def set_machine_definition(mdjson):
     mdjson = {i['name']: i['value'] for i in mdjson}
     md = get_machine_definition(mdjson['hostname'])
@@ -128,6 +144,60 @@ def remove_boot_config_definition(title):
     db.session.commit()
 
 
+def get_parsed_boot_config(hostname, test=False):
+    machine = get_machine_definition(hostname)
+    switch_type = machine._switch_type[machine.switch_type]
+    ct = datetime.datetime.now()
+    if switch_type == 'timed':
+        td = datetime.timedelta(seconds=machine.time_between)
+        if machine.last_boot + td > ct:
+            boot_config = machine.alternate_boot
+        else:
+            boot_config = machine.default_boot
+    elif switch_type == 'alternating':
+        if machine.use_alternate:
+            boot_config = machine.alternate_boot
+        else:
+            boot_config = machine.default_boot
+        machine.use_alternate = not machine.use_alternate
+    elif switch_type == 'switched':
+        if machine.use_alternate:
+            boot_config = machine.alternate_boot
+        else:
+            boot_config = machine.default_boot
+    machine.last_boot = ct
+    if not test:
+        db.session.commit()
+    variables = {v.key: v.value for v in [get_variable_definition(vn) for vn in get_list_of_variables()]}
+    return boot_config.config.format(**variables)
+
+
+def set_variable_definition(vjson):
+    vjson = {i['name']: i['value'] for i in vjson}
+    vd = get_variable_definition(vjson['key'])
+    if vd is None:
+        vd = Variable(vjson['key'], vjson['value'])
+        db.session.add(vd)
+    vd.key = vjson['key']
+    vd.value = vjson['value']
+    db.session.commit()
+
+
+def get_list_of_variables():
+    all_variables = Variable.query.all()
+    return [variable.key for variable in all_variables]
+
+
+def get_variable_definition(key):
+    return Variable.query.filter_by(key=key).first()
+
+
+def remove_variable_definition(key):
+    variable = get_variable_definition(key)
+    db.session.delete(variable)
+    db.session.commit()
+
+
 @app.route('/api/v1/machine/', methods=['GET', 'PUT'])
 def api_v1_machine():
     if request.method == 'PUT':
@@ -154,6 +224,20 @@ def api_v1_boot_config():
     except Exception as ex:
         return make_response(jsonify(err=str(ex)), 403)
     return jsonify(*boot_config_list)
+
+
+@app.route('/api/v1/variable/', methods=['GET', 'PUT'])
+def api_v1_variable():
+    if request.method == 'PUT':
+        try:
+            set_variable_definition(request.get_json())
+        except Exception as ex:
+            return make_response(jsonify(err=str(ex)), 403)
+    try:
+        variable_list = get_list_of_variables()
+    except Exception as ex:
+        return make_response(jsonify(err=str(ex)), 403)
+    return jsonify(*variable_list)
 
 
 @app.route('/api/v1/machine/<hostname>/', methods=['GET', 'POST', 'DELETE'])
@@ -205,6 +289,30 @@ def api_v1_boot_config_title(title):
     return jsonify(**formatted_boot_config)
 
 
+@app.route('/api/v1/variable/<key>/', methods=['GET', 'POST', 'DELETE'])
+def api_v1_variable_key(key):
+    if request.method == 'POST':
+        try:
+            set_variable_definition(request.get_json())
+        except Exception as ex:
+            return make_response(jsonify(err=str(ex)), 403)
+    try:
+        variable = get_variable_definition(key)
+    except Exception as ex:
+        return make_response(jsonify(err=str(ex)), 403)
+    if request.method == 'DELETE':
+        try:
+            remove_variable_definition(key)
+        except Exception as ex:
+            return make_response(jsonify(err=str(ex)), 403)
+        return jsonify(status="ok")
+    fv = {
+        'key': variable.key,
+        'value': variable.value
+    }
+    return jsonify(**fv)
+
+
 @app.route('/api/v1/boot/', methods=['GET'])
 def api_v1_boot():
     try:
@@ -212,29 +320,15 @@ def api_v1_boot():
     except socket.herror as ex:
         return make_response(jsonify(err=str(ex)), 403)
     host = host.split('.')[0]
-    machine = get_machine_definition(host)
-    switch_type = machine._switch_type[machine.switch_type]
-    ct = datetime.datetime.now()
-    if switch_type == 'timed':
-        td = datetime.timedelta(seconds=machine.time_between)
-        if machine.last_boot + td > ct:
-            boot_config = machine.alternate_boot
-        else:
-            boot_config = machine.default_boot
-    elif switch_type == 'alternating':
-        if machine.use_alternate:
-            boot_config = machine.alternate_boot
-        else:
-            boot_config = machine.default_boot
-        machine.use_alternate = not machine.use_alternate
-    elif switch_type == 'switched':
-        if machine.use_alternate:
-            boot_config = machine.alternate_boot
-        else:
-            boot_config = machine.default_boot
-    machine.last_boot = ct
-    db.session.commit()
-    return boot_config.config
+    return get_parsed_boot_config(host)
+
+
+@app.route('/api/v1/boot/test/<hostname>/', methods=['GET'])
+def api_v1_boot_test(hostname):
+    try:
+        return get_parsed_boot_config(hostname, test=True)
+    except Exception as ex:
+        return str(ex)
 
 
 @app.route('/api/v1/boot/finished/', methods=['GET'])
@@ -263,3 +357,8 @@ def render_home():
 @app.route('/boot_configs')
 def render_boot_configs():
     return render_template('boot_configs.html')
+
+
+@app.route('/variables')
+def render_variables():
+    return render_template('variables.html')
