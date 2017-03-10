@@ -1,111 +1,118 @@
-<html>
-        <head>
-                <title>Stateful Boot Management</title>
-                <meta content="text/html; charset = UTF-8" http-equiv="content-type" />
-                <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
-                <script>
-                        function parse_list(response) {
-                                $('#list').empty();
-                                if (typeof(response) != "object") {
-                                        response = [response];
-                                } 
-                                for(var i = 0; i < response.length; i++) {
-                                        $('#list').append($('<li>').append(response[i]).addClass("boot_config"));
-                                }
-                                $('.boot_config').on('click', function() {
-                                        load($(this).text());
-                                });
+{% extends "layout.html" %}
+{% block head %}
+        {{ super() }}
+        <script>
+                function parse_list(response) {
+                        $('#list').empty();
+                        if (typeof(response) != "object") {
+                                response = [response];
+                        } 
+                        for(var i = 0; i < response.length; i++) {
+                                $('#list').append($('<li>').append(response[i]).addClass("boot_config"));
                         }
-                        function parse_response(response) {
-                                $('#config').val(response['config']);
-                                $('#title').val(response['title']);
-                        }
-                        function log_ajax_err(xhr, resp, text) {
-                                console.log(xhr, resp, text);
-                        }
-                        function get_boot_configs() {
+                        $('.boot_config').on('click', function() {
+                                load($(this).text());
+                        });
+                }
+                function parse_response(response) {
+                        $('#config').val(response['config']);
+                        $('#title').val(response['title']);
+                }
+                function log_ajax_err(xhr, resp, text) {
+                        console.log(xhr, resp, text);
+                }
+                function get_boot_configs() {
+                        $.ajax({
+                                url: '/api/v1/boot_config/',
+                                type: 'GET',
+                                success: parse_list,
+                                error: log_ajax_err
+                        })
+                }
+                function load(title) {
+                        $.ajax({
+                                url: '/api/v1/boot_config/' + title + '/',
+                                type: 'GET',
+                                success: parse_response,
+                                error: log_ajax_err
+                        })
+                }
+                $(document).ready(function(){
+                        $("#add").on('click', function(){
                                 $.ajax({
                                         url: '/api/v1/boot_config/',
-                                        type: 'GET',
+                                        type: 'PUT',
+                                        contentType: "application/json",
+                                        dataType: 'json',
+                                        data: JSON.stringify($("#form").serializeArray()),
                                         success: parse_list,
                                         error: log_ajax_err
                                 })
-                        }
-                        function load(title) {
+                        });
+                        $("#update").on('click', function() {
                                 $.ajax({
-                                        url: '/api/v1/boot_config/' + title + '/',
-                                        type: 'GET',
+                                        url: '/api/v1/boot_config/' + $('#title').val() + '/',
+                                        type: 'POST',
+                                        contentType: "application/json",
+                                        dataType: 'json',
+                                        data: JSON.stringify($('#form').serializeArray()),
                                         success: parse_response,
                                         error: log_ajax_err
                                 })
-                        }
-                        $(document).ready(function(){
-                                $("#add").on('click', function(){
-                                        $.ajax({
-                                                url: '/api/v1/boot_config/',
-                                                type: 'PUT',
-                                                contentType: "application/json",
-                                                dataType: 'json',
-                                                data: JSON.stringify($("#form").serializeArray()),
-                                                success: parse_list,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#update").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/boot_config/' + $('#title').val() + '/',
-                                                type: 'POST',
-                                                contentType: "application/json",
-                                                dataType: 'json',
-                                                data: JSON.stringify($('#form').serializeArray()),
-                                                success: parse_response,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#load").on('click', function() {
-                                        load($('#title').val());
-                                });
-                                $("#delete").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/boot_config/' + $('#title').val() + '/',
-                                                type: 'DELETE',
-                                                success: get_boot_configs,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                // http://stackoverflow.com/a/6140696
-                                $("textarea").keydown(function(e) {
-                                    if(e.keyCode === 9) { // tab was pressed
-                                        // get caret position/selection
-                                        var start = this.selectionStart;
-                                        var end = this.selectionEnd;
-                                        var $this = $(this);
-                                        var value = $this.val();
-                                        // set textarea value to: text before caret + tab + text after caret
-                                        $this.val(value.substring(0, start)
-                                                    + "\t"
-                                                    + value.substring(end));
-                                        // put caret at right position again (add one for the tab)
-                                        this.selectionStart = this.selectionEnd = start + 1;
-                                        // prevent the focus lose
-                                        e.preventDefault();
-                                    }
-                                });
-                                get_boot_configs();
                         });
-                </script>
-        </head>
-        <body>
-                <form id="form">
-                        <input type="text" id="title" name="title" placeholder="Title">
-                        <textarea rows="8" cols="70" id="config" name="config" placeholder="Config"></textarea>
-                        <input type="button" id="add" name="add" value="Add">
-                        <input type="button" id="update" name="update" value="Update">
-                        <input type="button" id="load" name="load" value="Load">
-                        <input type="button" id="delete" name="delete" value="Delete">
-                </form>
-                <h2><a href="/machines">Machines</a></h2>
-                <ul id="list">
-                </ul>
-        </body>
-</html>
+                        $("#load").on('click', function() {
+                                load($('#title').val());
+                        });
+                        $("#delete").on('click', function() {
+                                $.ajax({
+                                        url: '/api/v1/boot_config/' + $('#title').val() + '/',
+                                        type: 'DELETE',
+                                        success: get_boot_configs,
+                                        error: log_ajax_err
+                                })
+                        });
+                        // http://stackoverflow.com/a/6140696
+                        $("textarea").keydown(function(e) {
+                            if(e.keyCode === 9) { // tab was pressed
+                                // get caret position/selection
+                                var start = this.selectionStart;
+                                var end = this.selectionEnd;
+                                var $this = $(this);
+                                var value = $this.val();
+                                // set textarea value to: text before caret + tab + text after caret
+                                $this.val(value.substring(0, start)
+                                            + "\t"
+                                            + value.substring(end));
+                                // put caret at right position again (add one for the tab)
+                                this.selectionStart = this.selectionEnd = start + 1;
+                                // prevent the focus lose
+                                e.preventDefault();
+                            }
+                        });
+                        get_boot_configs();
+                });
+        </script>
+{% endblock %}
+{% block content %}
+        <form id="form" class="form-horizontal">
+                <div class="form-group">
+                        <label class="col-sm-2 control-label" for="title">Title</label>
+                        <div class="col-sm-10">
+                                <input class="form-control" type="text" id="title" name="title" placeholder="Title">
+                        </div>
+                </div>
+                <div class="form-group">
+                        <label class="col-sm-2 control-label" for="config">Config</label>
+                        <div class="col-sm-10">
+                                <textarea rows="5" class="form-control" id="config" name="config" placeholder="Config"></textarea>
+                        </div>
+                </div>
+                <input class="col-sm-offset-2 btn btn-default" type="button" id="add" name="add" value="Add">
+                <input class="btn btn-default" type="button" id="update" name="update" value="Update">
+                <input class="btn btn-default" type="button" id="load" name="load" value="Load">
+                <input class="btn btn-default" type="button" id="delete" name="delete" value="Delete">
+        </form>
+        <h2>Machines</h2>
+        <ul id="list">
+        </ul>
+{% endblock %}
