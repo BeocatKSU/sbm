@@ -62,6 +62,12 @@ function parse_variable_response(response) {
 }
 function log_ajax_err(xhr, resp, text) {
         console.log(xhr, resp, text);
+        response = xhr.responseJSON['err'];
+        $('#modal-2 .modal-body').empty();
+        $('#modal-2 .modal-body').append($('<textarea readonly class="form-control">').append(response));
+        $('#modal-2 .modal-body textarea').attr('rows', response.split(/\r\n|\r|\n/).length + 3);
+        $('#modal-2 .modal-title').text("" + xhr.status + ': ' + xhr.statusText);
+        $('#modal-2').modal('show');
 }
 function get_boot_configs() {
         $.ajax({
