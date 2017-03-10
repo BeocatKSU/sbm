@@ -2,42 +2,6 @@
 {% block head %}
         {{ super() }}
         <script>
-                function parse_list(response) {
-                        $('#variable_list').empty();
-                        if (typeof(response) != "object") {
-                                response = [response];
-                        } 
-                        for(var i = 0; i < response.length; i++) {
-                                $('#variable_list').append($('<button type="button">').append(response[i]).addClass("variable list-group-item"));
-                        }
-                        $('.variable').on('click', function() {
-                                load($(this).text());
-                        });
-                }
-                function parse_response(response) {
-                        $('#value').val(response['value']);
-                        $('#value').attr('rows', response['value'].split(/\r\n|\r|\n/).length + 5);
-                        $('#key').val(response['key']);
-                }
-                function log_ajax_err(xhr, resp, text) {
-                        console.log(xhr, resp, text);
-                }
-                function get_variables() {
-                        $.ajax({
-                                url: '/api/v1/variable/',
-                                type: 'GET',
-                                success: parse_list,
-                                error: log_ajax_err
-                        })
-                }
-                function load(key) {
-                        $.ajax({
-                                url: '/api/v1/variable/' + key + '/',
-                                type: 'GET',
-                                success: parse_response,
-                                error: log_ajax_err
-                        })
-                }
                 $(document).ready(function(){
                         $("#add").on('click', function(){
                                 $.ajax({
@@ -46,7 +10,7 @@
                                         contentType: "application/json",
                                         dataType: 'json',
                                         data: JSON.stringify($("#form").serializeArray()),
-                                        success: parse_list,
+                                        success: parse_variable_list,
                                         error: log_ajax_err
                                 })
                         });
@@ -57,12 +21,12 @@
                                         contentType: "application/json",
                                         dataType: 'json',
                                         data: JSON.stringify($('#form').serializeArray()),
-                                        success: parse_response,
+                                        success: parse_variable_response,
                                         error: log_ajax_err
                                 })
                         });
                         $("#load").on('click', function() {
-                                load($('#key').val());
+                                load_variable($('#key').val());
                         });
                         $("#delete").on('click', function() {
                                 $.ajax({

@@ -2,42 +2,6 @@
 {% block head %}
         {{ super() }}
         <script>
-                function parse_list(response) {
-                        $('#boot_config_list').empty();
-                        if (typeof(response) != "object") {
-                                response = [response];
-                        } 
-                        for(var i = 0; i < response.length; i++) {
-                                $('#boot_config_list').append($('<button type="button">').append(response[i]).addClass("boot_config list-group-item"));
-                        }
-                        $('.boot_config').on('click', function() {
-                                load($(this).text());
-                        });
-                }
-                function parse_response(response) {
-                        $('#config').val(response['config']);
-                        $('#config').attr('rows', response['config'].split(/\r\n|\r|\n/).length + 5);
-                        $('#title').val(response['title']);
-                }
-                function log_ajax_err(xhr, resp, text) {
-                        console.log(xhr, resp, text);
-                }
-                function get_boot_configs() {
-                        $.ajax({
-                                url: '/api/v1/boot_config/',
-                                type: 'GET',
-                                success: parse_list,
-                                error: log_ajax_err
-                        })
-                }
-                function load(title) {
-                        $.ajax({
-                                url: '/api/v1/boot_config/' + title + '/',
-                                type: 'GET',
-                                success: parse_response,
-                                error: log_ajax_err
-                        })
-                }
                 $(document).ready(function(){
                         $("#add").on('click', function(){
                                 $.ajax({
@@ -46,7 +10,7 @@
                                         contentType: "application/json",
                                         dataType: 'json',
                                         data: JSON.stringify($("#form").serializeArray()),
-                                        success: parse_list,
+                                        success: parse_boot_config_list,
                                         error: log_ajax_err
                                 })
                         });
@@ -57,12 +21,12 @@
                                         contentType: "application/json",
                                         dataType: 'json',
                                         data: JSON.stringify($('#form').serializeArray()),
-                                        success: parse_response,
+                                        success: parse_boot_config_response,
                                         error: log_ajax_err
                                 })
                         });
                         $("#load").on('click', function() {
-                                load($('#title').val());
+                                load_boot_config($('#title').val());
                         });
                         $("#delete").on('click', function() {
                                 $.ajax({
@@ -91,6 +55,7 @@
                             }
                         });
                         get_boot_configs();
+                        get_variables();
                 });
         </script>
 {% endblock %}
@@ -118,6 +83,11 @@
                 <div id="boot-config-container" class="container-fluid col-sm-4">
                         <h4>Boot Configs</h4>
                         <div class="list-group" id="boot_config_list">
+                        </div>
+                </div>
+                <div id="variable-container" class="container-fluid col-sm-4">
+                        <h4>Variables</h4>
+                        <div class="list-group" id="variable_list">
                         </div>
                 </div>
         </div>
