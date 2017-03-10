@@ -16,6 +16,7 @@
                 }
                 function parse_response(response) {
                         $('#value').val(response['value']);
+                        $('#value').attr('rows', response['value'].split(/\r\n|\r|\n/).length + 5);
                         $('#key').val(response['key']);
                 }
                 function log_ajax_err(xhr, resp, text) {
