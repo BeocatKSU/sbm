@@ -1,111 +1,124 @@
-<html>
-        <head>
-                <title>Stateful Boot Management</title>
-                <meta content="text/html; charset = UTF-8" http-equiv="content-type" />
-                <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
-                <script>
-                        function parse_list(response) {
-                                $('#list').empty();
-                                if (typeof(response) != "object") {
-                                        response = [response];
-                                } 
-                                for(var i = 0; i < response.length; i++) {
-                                        $('#list').append($('<li>').append(response[i]).addClass("variable"));
-                                }
-                                $('.variable').on('click', function() {
-                                        load($(this).text());
-                                });
+{% extends "layout.html" %}
+{% block head %}
+        {{ super() }}
+        <script>
+                function parse_list(response) {
+                        $('#variable_list').empty();
+                        if (typeof(response) != "object") {
+                                response = [response];
+                        } 
+                        for(var i = 0; i < response.length; i++) {
+                                $('#variable_list').append($('<button type="button">').append(response[i]).addClass("variable list-group-item"));
                         }
-                        function parse_response(response) {
-                                $('#value').val(response['value']);
-                                $('#key').val(response['key']);
-                        }
-                        function log_ajax_err(xhr, resp, text) {
-                                console.log(xhr, resp, text);
-                        }
-                        function get_variables() {
+                        $('.variable').on('click', function() {
+                                load($(this).text());
+                        });
+                }
+                function parse_response(response) {
+                        $('#value').val(response['value']);
+                        $('#value').attr('rows', response['value'].split(/\r\n|\r|\n/).length + 5);
+                        $('#key').val(response['key']);
+                }
+                function log_ajax_err(xhr, resp, text) {
+                        console.log(xhr, resp, text);
+                }
+                function get_variables() {
+                        $.ajax({
+                                url: '/api/v1/variable/',
+                                type: 'GET',
+                                success: parse_list,
+                                error: log_ajax_err
+                        })
+                }
+                function load(key) {
+                        $.ajax({
+                                url: '/api/v1/variable/' + key + '/',
+                                type: 'GET',
+                                success: parse_response,
+                                error: log_ajax_err
+                        })
+                }
+                $(document).ready(function(){
+                        $("#add").on('click', function(){
                                 $.ajax({
                                         url: '/api/v1/variable/',
-                                        type: 'GET',
+                                        type: 'PUT',
+                                        contentType: "application/json",
+                                        dataType: 'json',
+                                        data: JSON.stringify($("#form").serializeArray()),
                                         success: parse_list,
                                         error: log_ajax_err
                                 })
-                        }
-                        function load(key) {
+                        });
+                        $("#update").on('click', function() {
                                 $.ajax({
-                                        url: '/api/v1/variable/' + key + '/',
-                                        type: 'GET',
+                                        url: '/api/v1/variable/' + $('#key').val() + '/',
+                                        type: 'POST',
+                                        contentType: "application/json",
+                                        dataType: 'json',
+                                        data: JSON.stringify($('#form').serializeArray()),
                                         success: parse_response,
                                         error: log_ajax_err
                                 })
-                        }
-                        $(document).ready(function(){
-                                $("#add").on('click', function(){
-                                        $.ajax({
-                                                url: '/api/v1/variable/',
-                                                type: 'PUT',
-                                                contentType: "application/json",
-                                                dataType: 'json',
-                                                data: JSON.stringify($("#form").serializeArray()),
-                                                success: parse_list,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#update").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/variable/' + $('#key').val() + '/',
-                                                type: 'POST',
-                                                contentType: "application/json",
-                                                dataType: 'json',
-                                                data: JSON.stringify($('#form').serializeArray()),
-                                                success: parse_response,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#load").on('click', function() {
-                                        load($('#key').val());
-                                });
-                                $("#delete").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/variable/' + $('#key').val() + '/',
-                                                type: 'DELETE',
-                                                success: get_variables,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                // http://stackoverflow.com/a/6140696
-                                $("textarea").keydown(function(e) {
-                                    if(e.keyCode === 9) { // tab was pressed
-                                        // get caret position/selection
-                                        var start = this.selectionStart;
-                                        var end = this.selectionEnd;
-                                        var $this = $(this);
-                                        var value = $this.val();
-                                        // set textarea value to: text before caret + tab + text after caret
-                                        $this.val(value.substring(0, start)
-                                                    + "\t"
-                                                    + value.substring(end));
-                                        // put caret at right position again (add one for the tab)
-                                        this.selectionStart = this.selectionEnd = start + 1;
-                                        // prevent the focus lose
-                                        e.preventDefault();
-                                    }
-                                });
-                                get_variables();
                         });
-                </script>
-        </head>
-        <body>
-                <form id="form">
-                        <input type="text" id="key" name="key" placeholder="Key">
-                        <textarea rows="8" cols="70" id="value" name="value" placeholder="Value"></textarea>
-                        <input type="button" id="add" name="add" value="Add">
-                        <input type="button" id="update" name="update" value="Update">
-                        <input type="button" id="load" name="load" value="Load">
-                        <input type="button" id="delete" name="delete" value="Delete">
-                </form>
-                <h2><a href="/variables">Variables</a></h2>
-                <ul id="list">
-                </ul>
-        </body>
-</html>
+                        $("#load").on('click', function() {
+                                load($('#key').val());
+                        });
+                        $("#delete").on('click', function() {
+                                $.ajax({
+                                        url: '/api/v1/variable/' + $('#key').val() + '/',
+                                        type: 'DELETE',
+                                        success: get_variables,
+                                        error: log_ajax_err
+                                })
+                        });
+                        // http://stackoverflow.com/a/6140696
+                        $("textarea").keydown(function(e) {
+                            if(e.keyCode === 9) { // tab was pressed
+                                // get caret position/selection
+                                var start = this.selectionStart;
+                                var end = this.selectionEnd;
+                                var $this = $(this);
+                                var value = $this.val();
+                                // set textarea value to: text before caret + tab + text after caret
+                                $this.val(value.substring(0, start)
+                                            + "\t"
+                                            + value.substring(end));
+                                // put caret at right position again (add one for the tab)
+                                this.selectionStart = this.selectionEnd = start + 1;
+                                // prevent the focus lose
+                                e.preventDefault();
+                            }
+                        });
+                        get_variables();
+                });
+        </script>
+{% endblock %}
+{% block content %}
+        <h2>Variables</h2>
+        <form id="form" class="form-horizontal">
+                <div class="form-group">
+                        <label class="col-sm-2 control-label" for="key">Key</label>
+                        <div class="col-sm-10">
+                                <input class="form-control" type="text" id="key" name="key" placeholder="Key">
+                        </div>
+                </div>
+                <div class="form-group">
+                        <label class="col-sm-2 control-label" for="value">Value</label>
+                        <div class="col-sm-10">
+                                <textarea class="form-control" rows="5" id="value" name="value" placeholder="Value"></textarea>
+                        </div>
+                </div>
+                <input class="col-sm-1 col-sm-offset-2 btn btn-default" type="button" id="add" name="add" value="Add">
+                <input class="col-sm-1 btn btn-default" type="button" id="update" name="update" value="Update">
+                <input class="col-sm-1 btn btn-default" type="button" id="load" name="load" value="Load">
+                <input class="col-sm-1 btn btn-default" type="button" id="delete" name="delete" value="Delete">
+        </form>
+        <div class="container-fluid col-sm-12">
+                <div id="variable-container" class="container-fluid col-sm-4">
+                        <h4>Variables</h4>
+                        <div class="list-group" id="variable_list">
+                        </div>
+                </div>
+        </div>
+{% endblock %}

@@ -1,186 +1,230 @@
-<html>
-        <head>
-                <title>Stateful Boot Management</title>
-                <meta content="text/html; charset = UTF-8" http-equiv="content-type" />
-                <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-                <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
-                <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-                <script>
-                        function parse_machine_list(response) {
-                                $('#machine_list').empty();
-                                if (typeof(response) != "object") {
-                                        response = [response];
-                                } 
-                                response.sort();
-                                for(var i = 0; i < response.length; i++) {
-                                        $('#machine_list').append($('<li>').append(response[i]).addClass("machine_config"));
-                                }
-                                $('.machine_config').on('click', function() {
-                                        load($(this).text());
-                                });
+{% extends "layout.html" %}
+{%block head %}
+        {{ super() }}
+        <script>
+                function parse_machine_list(response) {
+                        $('#machine_list').empty();
+                        if (typeof(response) != "object") {
+                                response = [response];
+                        } 
+                        response.sort();
+                        for(var i = 0; i < response.length; i++) {
+                                $('#machine_list').append($('<button type="button">').append(response[i]).addClass("machine_config list-group-item"));
                         }
-                        function parse_boot_config_list(response) {
-                                $('#boot_config_list').empty();
-                                if (typeof(response) != "object") {
-                                        response = [response];
-                                } 
-                                response.sort();
-                                for(var i = 0; i < response.length; i++) {
-                                        $('#boot_config_list').append($('<li>').append(response[i]).addClass("boot_config"));
-                                }
-                                $('.boot_config').on('click', function() {
-                                        set_boot_config($(this).text());
-                                });
+                        $('.machine_config').on('click', function() {
+                                load($(this).text());
+                        });
+                }
+                function parse_boot_config_list(response) {
+                        $('#boot_config_list').empty();
+                        if (typeof(response) != "object") {
+                                response = [response];
+                        } 
+                        response.sort();
+                        for(var i = 0; i < response.length; i++) {
+                                $('#boot_config_list').append($('<button type="button">').append(response[i]).addClass("boot_config list-group-item"));
                         }
-                        function parse_variable_list(response) {
-                                $('#variable_list').empty();
-                                if (typeof(response) != "object") {
-                                        response = [response];
-                                } 
-                                response.sort();
-                                for(var i = 0; i < response.length; i++) {
-                                        $('#variable_list').append($('<li>').append(response[i]).addClass("variable"));
-                                }
+                        $('.boot_config').on('click', function() {
+                                set_boot_config($(this).text());
+                        });
+                }
+                function parse_variable_list(response) {
+                        $('#variable_list').empty();
+                        if (typeof(response) != "object") {
+                                response = [response];
+                        } 
+                        response.sort();
+                        for(var i = 0; i < response.length; i++) {
+                                $('#variable_list').append($('<button type="button">').append(response[i]).addClass("variable list-group-item"));
                         }
-                        function parse_response(response) {
-                                console.log(response);
-                                $('#hostname').val(response['hostname']);
-                                $('#default_boot').val(response['default_boot']);
-                                $('#alternate_boot').val(response['alternate_boot']);
-                                $('#switch_type').val(response['switch_type']);
-                                $('#time_between').val(response['time_between']);
-                                if(response['switch_type'] == 'timed') {
-                                        $("#time_between").show();
-                                } else {
-                                        $("#time_between").hide();
-                                }
+                }
+                function parse_response(response) {
+                        console.log(response);
+                        $('#hostname').val(response['hostname']);
+                        $('#default_boot').val(response['default_boot']);
+                        $('#alternate_boot').val(response['alternate_boot']);
+                        $('#switch_type').val(response['switch_type']);
+                        $('#time_between').val(response['time_between']);
+                        if(response['switch_type'] == 'timed') {
+                                $("#time_between_div").show();
+                        } else {
+                                $("#time_between_div").hide();
                         }
-                        function log_ajax_err(xhr, resp, text) {
-                                console.log(xhr, resp, text);
+                }
+                function log_ajax_err(xhr, resp, text) {
+                        console.log(xhr, resp, text);
+                }
+                function get_machines() {
+                        $.ajax({
+                                url: '/api/v1/machine/',
+                                type: 'GET',
+                                success: parse_machine_list,
+                                error: log_ajax_err
+                        })
+                }
+                function get_boot_configs() {
+                        $.ajax({
+                                url: '/api/v1/boot_config/',
+                                type: 'GET',
+                                success: parse_boot_config_list,
+                                error: log_ajax_err
+                        })
+                }
+                function get_variables() {
+                        $.ajax({
+                                url: '/api/v1/variable/',
+                                type: 'GET',
+                                success: parse_variable_list,
+                                error: log_ajax_err
+                        })
+                }
+                function load(hostname) {
+                        $.ajax({
+                                url: '/api/v1/machine/' + hostname + '/',
+                                type: 'GET',
+                                success: parse_response,
+                                error: log_ajax_err
+                        })
+                }
+                function set_boot_config(title) {
+                        if ($("#default_boot").val() == "") {
+                                $("#default_boot").val(title);
                         }
-                        function get_machines() {
+                        if ($("#alternate_boot").val() == "") {
+                                $("#alternate_boot").val(title);
+                        }
+                }
+                function test_dialog(response) {
+                        $('#modal-1 .modal-body').empty();
+                        $('#modal-1 .modal-body').append($('<textarea readonly class="form-control">').append(response));
+                        $('#modal-1 .modal-body textarea').attr('rows', response.split(/\r\n|\r|\n/).length + 3);
+                        $('#modal-1').modal('show');
+                }
+                $(document).ready(function(){
+                        $("#add").on('click', function(){
                                 $.ajax({
                                         url: '/api/v1/machine/',
-                                        type: 'GET',
+                                        type: 'PUT',
+                                        contentType: "application/json",
+                                        dataType: 'json',
+                                        data: JSON.stringify($("#form").serializeArray()),
                                         success: parse_machine_list,
                                         error: log_ajax_err
                                 })
-                        }
-                        function get_boot_configs() {
+                        });
+                        $("#update").on('click', function() {
                                 $.ajax({
-                                        url: '/api/v1/boot_config/',
-                                        type: 'GET',
-                                        success: parse_boot_config_list,
-                                        error: log_ajax_err
-                                })
-                        }
-                        function get_variables() {
-                                $.ajax({
-                                        url: '/api/v1/variable/',
-                                        type: 'GET',
-                                        success: parse_variable_list,
-                                        error: log_ajax_err
-                                })
-                        }
-                        function load(hostname) {
-                                $.ajax({
-                                        url: '/api/v1/machine/' + hostname + '/',
-                                        type: 'GET',
+                                        url: '/api/v1/machine/' + $('#hostname').val() + '/',
+                                        type: 'POST',
+                                        contentType: "application/json",
+                                        dataType: 'json',
+                                        data: JSON.stringify($('#form').serializeArray()),
                                         success: parse_response,
                                         error: log_ajax_err
                                 })
-                        }
-                        function set_boot_config(title) {
-                                if ($("#default_boot").val() == "") {
-                                        $("#default_boot").val(title);
-                                }
-                                if ($("#alternate_boot").val() == "") {
-                                        $("#alternate_boot").val(title);
-                                }
-                        }
-                        function test_dialog(response) {
-                                $('<div>').append($('<textarea readonly>').append(response)).dialog();
-                        }
-                        $(document).ready(function(){
-                                $("#add").on('click', function(){
-                                        $.ajax({
-                                                url: '/api/v1/machine/',
-                                                type: 'PUT',
-                                                contentType: "application/json",
-                                                dataType: 'json',
-                                                data: JSON.stringify($("#form").serializeArray()),
-                                                success: parse_machine_list,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#update").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/machine/' + $('#hostname').val() + '/',
-                                                type: 'POST',
-                                                contentType: "application/json",
-                                                dataType: 'json',
-                                                data: JSON.stringify($('#form').serializeArray()),
-                                                success: parse_response,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#load").on('click', function() {
-                                        load($('#hostname').val());
-                                });
-                                $("#delete").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/machine/' + $('#hostname').val() + '/',
-                                                type: 'DELETE',
-                                                success: get_machines,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                $("#switch_type").on("change", function() {
-                                        if ($(this).val() == "timed") {
-                                                $("#time_between").show();
-                                        } else {
-                                                $("#time_between").hide();
-                                        }
-                                });
-                                $("#test").on('click', function() {
-                                        $.ajax({
-                                                url: '/api/v1/boot/test/' + $('#hostname').val() + '/',
-                                                type: 'GET',
-                                                success: test_dialog,
-                                                error: log_ajax_err
-                                        })
-                                });
-                                get_machines();
-                                get_boot_configs();
-                                get_variables();
                         });
-                </script>
-        </head>
-        <body>
-                <form id="form">
-                        <input type="text" id="hostname" name="hostname" placeholder="Hostname">
-                        <input type="text" id="default_boot" name="default_boot" placeholder="Default Boot Config Name">
-                        <input type="text" id="alternate_boot" name="alternate_boot" placeholder="Alternate Boot Config Name">
-                        <select name="switch_type" id="switch_type">
-                                <option value="switched">Switched</option>
-                                <option value="alternating">Alternating</option>
-                                <option value="timed">Timed</option>
-                        </select>
-                        <input type="text" id="time_between" name="time_between" placeholder="Seconds between boots" hidden>
-                        <input type="button" id="add" name="add" value="Add">
-                        <input type="button" id="update" name="update" value="Update">
-                        <input type="button" id="load" name="load" value="Load">
-                        <input type="button" id="delete" name="delete" value="Delete">
-                        <input type="button" id="test" name="test", value="Test">
-                </form>
-                <h2>Machines</h2>
-                <ul id="machine_list">
-                </ul>
-                <h2><a href="/boot_configs">Boot Configs</a></h2>
-                <ul id="boot_config_list">
-                </ul>
-                <h2><a href="/variables">Variables</a></h2>
-                <ul id="variable_list">
-                </ul>
-        </body>
-</html>
+                        $("#load").on('click', function() {
+                                load($('#hostname').val());
+                        });
+                        $("#delete").on('click', function() {
+                                $.ajax({
+                                        url: '/api/v1/machine/' + $('#hostname').val() + '/',
+                                        type: 'DELETE',
+                                        success: get_machines,
+                                        error: log_ajax_err
+                                })
+                        });
+                        $("#switch_type").on("change", function() {
+                                if ($(this).val() == "timed") {
+                                        $("#time_between_div").show();
+                                } else {
+                                        $("#time_between_div").hide();
+                                }
+                        });
+                        $("#test").on('click', function() {
+                                $.ajax({
+                                        url: '/api/v1/boot/test/' + $('#hostname').val() + '/',
+                                        type: 'GET',
+                                        success: test_dialog,
+                                        error: log_ajax_err
+                                })
+                        });
+                        get_machines();
+                        get_boot_configs();
+                        get_variables();
+                });
+        </script>
+{% endblock %}
+{% block content %}
+        <h2>Host Configuration</h2>
+        <form id="form" class="form-horizontal">
+                <div class="form-group">
+                        <div class="form-group">
+                                <label class="col-sm-2 control-label" for="hostname">Hostname</label>
+                                <div class="col-sm-10">
+                                        <input class="form-control" type="text" id="hostname" name="hostname" placeholder="Hostname">
+                                </div>
+                        </div>
+                        <div class="form-group">
+                                <label class="col-sm-2 control-label" for="default_boot">Default Boot</label>
+                                <div class="col-sm-10">
+                                        <input class="form-control" type="text" id="default_boot" name="default_boot" placeholder="Default Boot Config Name">
+                                </div>
+                        </div>
+                        <div class="form-group">
+                                <label class="col-sm-2 control-label" for="alternate_boot">Alternate Boot</label>
+                                <div class="col-sm-10">
+                                        <input class="form-control" type="text" id="alternate_boot" name="alternate_boot" placeholder="Alternate Boot Config Name">
+                                </div>
+                        </div>
+                        <div class="form-group">
+                                <label class="col-sm-2 control-label" for="switch_type">Boot Switch Type</label>
+                                <div class="col-sm-10">
+                                        <select class="form-control" name="switch_type" id="switch_type">
+                                                <option value="switched">Switched</option>
+                                                <option value="alternating">Alternating</option>
+                                                <option value="timed">Timed</option>
+                                        </select>
+                                </div>
+                        </div>
+                        <div class="form-group" id="time_between_div" hidden>
+                                <label class="col-sm-2 control-label" for="time_between">Time Between Boots</label>
+                                <div class="col-sm-10">
+                                        <input class="form-control" type="text" id="time_between" name="time_between" placeholder="Seconds between boots">
+                                </div>
+                        </div>
+                <input class="col-sm-1 col-sm-offset-2 btn btn-default" type="button" id="add" name="add" value="Add">
+                <input class="col-sm-1 btn btn-default" type="button" id="update" name="update" value="Update">
+                <input class="col-sm-1 btn btn-default" type="button" id="load" name="load" value="Load">
+                <input class="col-sm-1 btn btn-default" type="button" id="delete" name="delete" value="Delete">
+                <input class="col-sm-1 btn btn-default" type="button" id="test" name="test", value="Test">
+        </form>
+        <div class="container-fluid col-sm-12">
+                <div id='machine-container' class="container-fluid col-sm-4">
+                        <h4>Machines</h4>
+                        <div class="list-group" id="machine_list">
+                        </div>
+                </div>
+                <div id="boot-config-container" class="container-fluid col-sm-4">
+                        <h4>Boot Configs</h4>
+                        <div class="list-group" id="boot_config_list">
+                        </div>
+                </div>
+                <div id="variable-container" class="container-fluid col-sm-4">
+                        <h4>Variables</h4>
+                        <div class="list-group" id="variable_list">
+                        </div>
+                </div>
+        </div>
+        <div class="modal fade" tab-index="-1" role="dialog" id="modal-1">
+                <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                                <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                </div>
+                                <div class="modal-body" id="modal-1-body">
+                                </div>
+                        </div>
+                </div>
+        </div>
+{% endblock %}
