@@ -3,12 +3,12 @@
         {{ super() }}
         <script>
                 function parse_list(response) {
-                        $('#list').empty();
+                        $('#boot_config_list').empty();
                         if (typeof(response) != "object") {
                                 response = [response];
                         } 
                         for(var i = 0; i < response.length; i++) {
-                                $('#list').append($('<li>').append(response[i]).addClass("boot_config"));
+                                $('#boot_config_list').append($('<button type="button">').append(response[i]).addClass("boot_config list-group-item"));
                         }
                         $('.boot_config').on('click', function() {
                                 load($(this).text());
@@ -113,7 +113,11 @@
                 <input class="btn btn-default" type="button" id="load" name="load" value="Load">
                 <input class="btn btn-default" type="button" id="delete" name="delete" value="Delete">
         </form>
-        <h2>Machines</h2>
-        <ul id="list">
-        </ul>
+        <div class="container-fluid col-sm-12">
+                <div id="boot-config-container" class="container-fluid col-sm-4">
+                        <h2>Boot Configs</h2>
+                        <div class="list-group" id="boot_config_list">
+                        </div>
+                </div>
+        </div>
 {% endblock %}

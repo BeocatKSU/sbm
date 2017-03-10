@@ -3,12 +3,12 @@
         {{ super() }}
         <script>
                 function parse_list(response) {
-                        $('#list').empty();
+                        $('#variable_list').empty();
                         if (typeof(response) != "object") {
                                 response = [response];
                         } 
                         for(var i = 0; i < response.length; i++) {
-                                $('#list').append($('<li>').append(response[i]).addClass("variable"));
+                                $('#variable_list').append($('<button type="button">').append(response[i]).addClass("variable list-group-item"));
                         }
                         $('.variable').on('click', function() {
                                 load($(this).text());
@@ -113,7 +113,11 @@
                 <input class="btn btn-default" type="button" id="load" name="load" value="Load">
                 <input class="btn btn-default" type="button" id="delete" name="delete" value="Delete">
         </form>
-        <h2>Variables</h2>
-        <ul id="list">
-        </ul>
+        <div class="container-fluid col-sm-12">
+                <div id="variable-container" class="container-fluid col-sm-4">
+                        <h2>Variables</h2>
+                        <div class="list-group" id="variable_list">
+                        </div>
+                </div>
+        </div>
 {% endblock %}

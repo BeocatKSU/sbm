@@ -9,7 +9,7 @@
                         } 
                         response.sort();
                         for(var i = 0; i < response.length; i++) {
-                                $('#machine_list').append($('<li>').append(response[i]).addClass("machine_config"));
+                                $('#machine_list').append($('<button type="button">').append(response[i]).addClass("machine_config list-group-item"));
                         }
                         $('.machine_config').on('click', function() {
                                 load($(this).text());
@@ -22,7 +22,7 @@
                         } 
                         response.sort();
                         for(var i = 0; i < response.length; i++) {
-                                $('#boot_config_list').append($('<li>').append(response[i]).addClass("boot_config"));
+                                $('#boot_config_list').append($('<button type="button">').append(response[i]).addClass("boot_config list-group-item"));
                         }
                         $('.boot_config').on('click', function() {
                                 set_boot_config($(this).text());
@@ -35,7 +35,7 @@
                         } 
                         response.sort();
                         for(var i = 0; i < response.length; i++) {
-                                $('#variable_list').append($('<li>').append(response[i]).addClass("variable"));
+                                $('#variable_list').append($('<button type="button">').append(response[i]).addClass("variable list-group-item"));
                         }
                 }
                 function parse_response(response) {
@@ -198,15 +198,23 @@
                 <input class="btn btn-default" type="button" id="delete" name="delete" value="Delete">
                 <input class="btn btn-default" type="button" id="test" name="test", value="Test">
         </form>
-        <h2>Machines</h2>
-        <ul id="machine_list">
-        </ul>
-        <h2>Boot Configs</h2>
-        <ul id="boot_config_list">
-        </ul>
-        <h2>Variables</h2>
-        <ul id="variable_list">
-        </ul>
+        <div class="container-fluid col-sm-12">
+                <div id='machine-container' class="container-fluid col-sm-4">
+                        <h2>Machines</h2>
+                        <div class="list-group" id="machine_list">
+                        </div>
+                </div>
+                <div id="boot-config-container" class="container-fluid col-sm-4">
+                        <h2>Boot Configs</h2>
+                        <div class="list-group" id="boot_config_list">
+                        </div>
+                </div>
+                <div id="variable-container" class="container-fluid col-sm-4">
+                        <h2>Variables</h2>
+                        <div class="list-group" id="variable_list">
+                        </div>
+                </div>
+        </div>
         <div class="modal fade" tab-index="-1" role="dialog" id="modal-1">
                 <div class="modal-dialog" role="document">
                         <div class="modal-content">
