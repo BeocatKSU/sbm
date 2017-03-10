@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 import socket
 import datetime
 import logging
+import traceback
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
@@ -204,11 +205,11 @@ def api_v1_machine():
         try:
             set_machine_definition(request.get_json())
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
     try:
         machine_list = get_list_of_machines()
     except Exception as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     return jsonify(*machine_list)
 
 
@@ -218,11 +219,11 @@ def api_v1_boot_config():
         try:
             set_boot_config_definition(request.get_json())
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
     try:
         boot_config_list = get_list_of_boot_configs()
     except Exception as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     return jsonify(*boot_config_list)
 
 
@@ -232,11 +233,11 @@ def api_v1_variable():
         try:
             set_variable_definition(request.get_json())
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
     try:
         variable_list = get_list_of_variables()
     except Exception as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     return jsonify(*variable_list)
 
 
@@ -246,23 +247,26 @@ def api_v1_machine_hostname(hostname):
         try:
             set_machine_definition(request.get_json())
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
     try:
         machine = get_machine_definition(hostname)
     except Exception as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     if request.method == 'DELETE':
         try:
             remove_machine_definition(hostname)
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
         return jsonify(status="ok")
-    fm = {}
-    fm['switch_type'] = machine._switch_type[machine.switch_type]
-    for item in ['hostname', 'use_alternate', 'last_boot', 'time_between']:
-        fm[item] = getattr(machine, item)
-    for item in ['default_boot', 'alternate_boot']:
-        fm[item] = getattr(machine, item).title
+    try:
+        fm = {}
+        fm['switch_type'] = machine._switch_type[machine.switch_type]
+        for item in ['hostname', 'use_alternate', 'last_boot', 'time_between']:
+            fm[item] = getattr(machine, item)
+        for item in ['default_boot', 'alternate_boot']:
+            fm[item] = getattr(machine, item).title
+    except:
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     return jsonify(**fm)
 
 
@@ -272,20 +276,23 @@ def api_v1_boot_config_title(title):
         try:
             set_boot_config_definition(request.get_json())
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
     try:
         boot_config = get_boot_config_definition(title)
     except Exception as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     if request.method == 'DELETE':
         try:
             remove_boot_config_definition(title)
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
         return jsonify(status="ok")
-    formatted_boot_config = {}
-    for item in ['title', 'config']:
-        formatted_boot_config[item] = getattr(boot_config, item)
+    try:
+        formatted_boot_config = {}
+        for item in ['title', 'config']:
+            formatted_boot_config[item] = getattr(boot_config, item)
+    except:
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     return jsonify(**formatted_boot_config)
 
 
@@ -295,21 +302,24 @@ def api_v1_variable_key(key):
         try:
             set_variable_definition(request.get_json())
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
     try:
         variable = get_variable_definition(key)
     except Exception as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     if request.method == 'DELETE':
         try:
             remove_variable_definition(key)
         except Exception as ex:
-            return make_response(jsonify(err=str(ex)), 403)
+            return make_response(jsonify(err=traceback.format_exc()), 406)
         return jsonify(status="ok")
-    fv = {
-        'key': variable.key,
-        'value': variable.value
-    }
+    try:
+        fv = {
+            'key': variable.key,
+            'value': variable.value
+        }
+    except:
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     return jsonify(**fv)
 
 
@@ -318,7 +328,7 @@ def api_v1_boot():
     try:
         host = socket.gethostbyaddr(request.remote_addr)[0]
     except socket.herror as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     host = host.split('.')[0]
     return get_parsed_boot_config(host)
 
@@ -328,7 +338,7 @@ def api_v1_boot_test(hostname):
     try:
         return get_parsed_boot_config(hostname, test=True)
     except Exception as ex:
-        return str(ex)
+        return traceback.format_exc()
 
 
 @app.route('/api/v1/boot/finished/', methods=['GET'])
@@ -336,7 +346,7 @@ def api_v1_boot_finished():
     try:
         host = socket.gethostbyaddr(request.remote_addr)[0]
     except socket.herror as ex:
-        return make_response(jsonify(err=str(ex)), 403)
+        return make_response(jsonify(err=traceback.format_exc()), 404)
     host = host.split('.')[0]
     machine = get_machine_definition(host)
     machine.use_alternate = not machine.use_alternate
