@@ -9,7 +9,7 @@
                                         type: 'PUT',
                                         contentType: "application/json",
                                         dataType: 'json',
-                                        data: JSON.stringify($("#form").serializeArray()),
+                                        data: serialize_form($("#form")),
                                         success: parse_machine_list,
                                         error: log_ajax_err
                                 })
@@ -20,7 +20,7 @@
                                         type: 'POST',
                                         contentType: "application/json",
                                         dataType: 'json',
-                                        data: JSON.stringify($('#form').serializeArray()),
+                                        data: serialize_form($("#form")),
                                         success: parse_machine_response,
                                         error: log_ajax_err
                                 })

@@ -91,7 +91,6 @@ class Variable(db.Model):
 
 
 def set_machine_definition(mdjson):
-    mdjson = {i['name']: i['value'] for i in mdjson}
     md = get_machine_definition(mdjson['hostname'])
     dbc = get_boot_config_definition(mdjson['default_boot'])
     abc = get_boot_config_definition(mdjson['alternate_boot'])
@@ -121,7 +120,6 @@ def remove_machine_definition(hostname):
 
 
 def set_boot_config_definition(bcjson):
-    bcjson = {i['name']: i['value'] for i in bcjson}
     bc = get_boot_config_definition(bcjson['title'])
     if bc is None:
         bc = BootConfig(bcjson['title'], bcjson['config'])
@@ -174,7 +172,6 @@ def get_parsed_boot_config(hostname, test=False):
 
 
 def set_variable_definition(vjson):
-    vjson = {i['name']: i['value'] for i in vjson}
     vd = get_variable_definition(vjson['key'])
     if vd is None:
         vd = Variable(vjson['key'], vjson['value'])
