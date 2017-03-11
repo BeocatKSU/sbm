@@ -131,3 +131,11 @@ function test_dialog(response) {
         $('#modal-1 .modal-body textarea').attr('rows', response.split(/\r\n|\r|\n/).length + 3);
         $('#modal-1').modal('show');
 }
+function serialize_form(form) {
+        form = form.serializeArray();
+        var data = {};
+        for (var i = 0; i < form.length; i++) {
+                data[form[i].name] = form[i].value;
+        }
+        return JSON.stringify(data);
+}
