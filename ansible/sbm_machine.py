@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import requests
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 try:
     from urlparse import urljoin
 except ImportError:
@@ -19,26 +20,34 @@ MACHINE_KEYS = [
 
 def _get_machines(uri):
     api_url = urljoin(uri, API_BASE)
-    return requests.get(api_url).json()
+    mr = requests.get(api_url)
+    mr.raise_for_status()
+    return mr.json()
 
 
 def _get(data):
     api_url = urljoin(data['sbm_uri'], API_BASE)
     api_url = urljoin(api_url, data['hostname'] + '/')
-    return requests.get(api_url).json()
+    mr = requests.get(api_url)
+    mr.raise_for_status()
+    return mr.json()
 
 
 def _remove(data):
-    retval = {'failed': False, 'changed': False}
+    retval = {'failed': True, 'changed': False}
     api_url = urljoin(data['sbm_uri'], API_BASE)
     api_url = urljoin(api_url, data['hostname'] + '/')
-    resp = requests.delete(api_url).json()
-    if 'status' not in resp.keys() or resp['status'] != 'ok':
-        retval['failed'] = True
-        retval['msg'] = "Failed to remove host"
-    else:
-        retval['changed'] = True
-        retval['msg'] = "Successfully removed host"
+    dr = requests.delete(api_url)
+    try:
+        resp = dr.json()
+        if 'status' not in resp.keys() or resp['status'] != 'ok':
+            retval['msg'] = "Failed to remove host"
+        else:
+            retval['changed'] = True
+            retval['failed'] = False
+            retval['msg'] = "Successfully removed host"
+    except:
+        retval['msg'] = 'API did not respond with JSON'
     return retval
 
 
@@ -53,7 +62,12 @@ def _update(data, check):
     retval = {'failed': False, 'changed': False}
     api_url = urljoin(data['sbm_uri'], API_BASE)
     api_url = urljoin(api_url, data['hostname'] + '/')
-    mach = _get(data)
+    try:
+        mach = _get(data)
+    except HTTPError:
+        retval['msg'] = 'API Error on _get'
+        retval['failed'] = True
+        return retval
     new_mach = {}
     for key in MACHINE_KEYS:
         new_mach[key] = data[key]
@@ -63,9 +77,13 @@ def _update(data, check):
         retval['changed'] = True
         if not check:
             resp = requests.post(api_url, json=new_mach)
-            if not _compare(new_mach, resp.json()):
-                retval['msg'] = 'Updated data not as expected'
+            if resp.status_code != 200:
+                retval['msg'] = 'API Error on post'
                 retval['failed'] = True
+            else:
+                if not _compare(new_mach, resp.json()):
+                    retval['msg'] = 'Updated data not as expected'
+                    retval['failed'] = True
     return retval
 
 
@@ -76,13 +94,22 @@ def _add(data):
     for key in MACHINE_KEYS:
         mach[key] = data[key]
     resp = requests.put(api_url, json=mach)
+    if resp.status_code != 200:
+        retval['msg'] = 'API Error on put'
+        retval['failed'] = True
+        return retval
     retval['msg'] = "Successfully added host"
     retval['changed'] = True
     if mach['hostname'] in resp.json():
-        new_mach = _get(data)
-        if not _compare(mach, new_mach):
+        try:
+            new_mach = _get(data)
+        except HTTPError:
+            retval['msg'] = 'API Error on _get'
             retval['failed'] = True
-            retval['msg'] = "Adding host failed"
+        else:
+            if not _compare(mach, new_mach):
+                retval['failed'] = True
+                retval['msg'] = "Adding host failed"
     else:
         retval['failed'] = True
         retval['msg'] = "Adding host failed"
@@ -90,24 +117,34 @@ def _add(data):
 
 
 def _present(data, check):
-    retval = {'failed': False, 'changed': False}
-    machines = _get_machines(data['sbm_uri'])
+    retval = {'failed': True, 'changed': False}
+    try:
+        machines = _get_machines(data['sbm_uri'])
+    except (HTTPError, ConnectionError):
+        retval['msg'] = 'API Failure, is SBM running at the specified URI?'
+        return retval
     if data['hostname'] in machines:
         retval.update(_update(data, check))
     else:
         if check:
             retval['changed'] = True
+            retval['failed'] = False
         else:
             retval.update(_add(data))
     return retval
 
 
 def _absent(data, check):
-    retval = {'failed': False, 'changed': False}
-    machines = _get_machines(data['sbm_uri'])
+    retval = {'failed': True, 'changed': False}
+    try:
+        machines = _get_machines(data['sbm_uri'])
+    except (HTTPError, ConnectionError):
+        retval['msg'] = 'API Failure, is SBM running at the specified URI?'
+        return retval
     if data['hostname'] in machines:
         if check:
             retval['changed'] = True
+            retval['failed'] = False
         else:
             retval.update(_remove(data))
     return retval
