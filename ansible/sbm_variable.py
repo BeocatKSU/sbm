@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import requests
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 try:
     from urlparse import urljoin
 except ImportError:
@@ -16,26 +17,34 @@ VARIABLE_KEYS = [
 
 def _get_variables(uri):
     api_url = urljoin(uri, API_BASE)
-    return requests.get(api_url).json()
+    vr = requests.get(api_url)
+    vr.raise_for_status()
+    return vr.json()
 
 
 def _get(data):
     api_url = urljoin(data['sbm_uri'], API_BASE)
     api_url = urljoin(api_url, data['key'] + '/')
-    return requests.get(api_url).json()
+    vr = requests.get(api_url)
+    vr.raise_for_status()
+    return vr.json()
 
 
 def _remove(data):
-    retval = {'failed': False, 'changed': False}
+    retval = {'failed': True, 'changed': False}
     api_url = urljoin(data['sbm_uri'], API_BASE)
     api_url = urljoin(api_url, data['key'] + '/')
-    resp = requests.delete(api_url).json()
-    if 'status' not in resp.keys() or resp['status'] != 'ok':
-        retval['failed'] = True
-        retval['msg'] = "Failed to remove variable"
-    else:
-        retval['changed'] = True
-        retval['msg'] = "Successfully removed variable"
+    dr = requests.delete(api_url)
+    try:
+        resp = dr.json()
+        if 'status' not in resp.keys() or resp['status'] != 'ok':
+            retval['msg'] = "Failed to remove variable"
+        else:
+            retval['changed'] = True
+            retval['failed'] = False
+            retval['msg'] = "Successfully removed variable"
+    except:
+        retval['msg'] = "API did not respond with JSON"
     return retval
 
 
@@ -50,7 +59,12 @@ def _update(data, check):
     retval = {'failed': False, 'changed': False}
     api_url = urljoin(data['sbm_uri'], API_BASE)
     api_url = urljoin(api_url, data['key'] + '/')
-    var = _get(data)
+    try:
+        var = _get(data)
+    except HTTPError:
+        retval['msg'] = 'API Error on _get'
+        retval['failed'] = True
+        return retval
     new_var = {}
     for key in VARIABLE_KEYS:
         new_var[key] = data[key]
@@ -60,9 +74,13 @@ def _update(data, check):
         retval['changed'] = True
         if not check:
             resp = requests.post(api_url, json=new_var)
-            if not _compare(new_var, resp.json()):
-                retval['msg'] = 'Updated variable not as expected'
+            if resp.status_code != 200:
+                retval['msg'] = 'API Error on post'
                 retval['failed'] = True
+            else:
+                if not _compare(new_var, resp.json()):
+                    retval['msg'] = 'Updated variable not as expected'
+                    retval['failed'] = True
     return retval
 
 
@@ -73,13 +91,22 @@ def _add(data):
     for key in VARIABLE_KEYS:
         var[key] = data[key]
     resp = requests.put(api_url, json=var)
+    if resp.status_code != 200:
+        retval['msg'] = 'API Error on put'
+        retval['failed'] = True
+        return retval
     retval['msg'] = "Successfully added variable"
     retval['changed'] = True
     if var['key'] in resp.json():
-        new_var = _get(data)
-        if not _compare(var, new_var):
+        try:
+            new_var = _get(data)
+        except HTTPError:
+            retval['msg'] = 'API Error on _get'
             retval['failed'] = True
-            retval['msg'] = "Adding variable failed"
+        else:
+            if not _compare(var, new_var):
+                retval['failed'] = True
+                retval['msg'] = "Adding variable failed"
     else:
         retval['failed'] = True
         retval['msg'] = "Adding variable failed"
@@ -87,24 +114,34 @@ def _add(data):
 
 
 def _present(data, check):
-    retval = {'failed': False, 'changed': False}
-    variables = _get_variables(data['sbm_uri'])
+    retval = {'failed': True, 'changed': False}
+    try:
+        variables = _get_variables(data['sbm_uri'])
+    except (HTTPError, ConnectionError):
+        retval['msg'] = 'API Failure, is SBM running at the specified URI?'
+        return retval
     if data['key'] in variables:
         retval.update(_update(data, check))
     else:
         if check:
             retval['changed'] = True
+            retval['failed'] = False
         else:
             retval.update(_add(data))
     return retval
 
 
 def _absent(data, check):
-    retval = {'failed': False, 'changed': False}
-    variables = _get_variables(data['sbm_uri'])
+    retval = {'failed': True, 'changed': False}
+    try:
+        variables = _get_variables(data['sbm_uri'])
+    except (HTTPError, ConnectionError):
+        retval['msg'] = 'API Failure, is SBM running at the specifed URI?'
+        return retval
     if data['key'] in variables:
         if check:
             retval['changed'] = True
+            retval['failed'] = False
         else:
             retval.update(_remove(data))
     return retval
